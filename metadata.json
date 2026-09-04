@@ -1,0 +1,6 @@
+{
+  "name": "Mental Health Tracker",
+  "description": "A minimalist, dark-toned mental health tracker featuring daily mood logs, gratitude journaling, guided breathing exercises, and an empathetic reflective companion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
