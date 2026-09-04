@@ -37,6 +37,32 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// --- Crisis-language safety net -------------------------------------------
+// Runs before the AI call or fallback logic, and does not depend on the
+// Gemini API being configured or reachable.
+const CRISIS_PATTERNS: RegExp[] = [
+  /\bsuicid(e|al)\b/i,
+  /\bkill(ing)?\s+myself\b/i,
+  /\bend(ing)?\s+(my\s+)?life\b/i,
+  /\bwant(ed)?\s+to\s+die\b/i,
+  /\bdon'?t\s+want\s+to\s+(be\s+here|live|exist)\b/i,
+  /\bself[\s-]?harm(ing)?\b/i,
+  /\bhurt(ing)?\s+myself\b/i,
+  /\bno\s+reason\s+to\s+live\b/i,
+  /\bcan'?t\s+go\s+on\b/i,
+];
+
+function containsCrisisLanguage(text: string): boolean {
+  return CRISIS_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+const CRISIS_RESPONSE =
+  "I'm really glad you told me this, and I want to take it seriously. I'm not able to provide " +
+  "crisis support myself, but please reach out right now to people who can: call or text 988 " +
+  "(US & Canada), text HOME to 741741, or visit befrienders.org globally. You do not have to " +
+  "carry this alone, and reaching out is a strong, worthwhile step.";
+// ---------------------------------------------------------------------------
+
 // Empathetic Chat endpoint with multi-model fallback and graceful degradation
 app.post('/api/chat', async (req, res) => {
   const { messages, context } = req.body;
@@ -47,6 +73,12 @@ app.post('/api/chat', async (req, res) => {
 
   const lastUserMsg =
     [...messages].reverse().find((m: { role: string; content: string }) => m.role === 'user')?.content || '';
+
+  // Crisis check runs first, unconditionally — before we even check
+  // whether the AI client is configured.
+  if (containsCrisisLanguage(lastUserMsg)) {
+    return res.json({ reply: CRISIS_RESPONSE, isCrisisResponse: true });
+  }
 
   const ai = getGenAI();
 
